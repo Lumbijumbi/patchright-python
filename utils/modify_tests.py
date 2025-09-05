@@ -6,11 +6,6 @@ files_to_skip = [
     # Console Domain Disabled
     'test_console.py',
 
-    # query_selector is deprecated
-    'test_queryselector.py',
-    'test_element_handle.py',
-    'test_element_handle_wait_for_element_state.py',
-
     # https://github.com/Kaliiiiiiiiii-Vinyzu/patchright/issues/31
     'test_route_web_socket.py'
 ]
@@ -52,14 +47,12 @@ tests_to_skip = [
     # Disable Popup Blocking
     "test_page_event_should_have_an_opener",
 
-    # query_selector is deprecated
-    "test_should_work_with_layout_selectors",
-    "test_should_dispatch_click_event_element_handle",
-    "test_should_dispatch_drag_and_drop_events_element_handle",
-
     # Minor Differences in Call Log. Deemed Unimportant
     "test_should_be_attached_fail_with_not",
     "test_add_script_tag_should_include_source_url_when_path_is_provided",
+    # / Black Formatting
+    "test_should_collect_sources",
+    "test_should_record_trace_with_source",
 
     # Server/Client Header Mismatch
     "test_should_report_request_headers_array",
@@ -69,15 +62,10 @@ tests_to_skip = [
 
 dont_isolate_evaluation_tests = [
     "test_timeout_waiting_for_stable_position",
-    "test_jshandle_evaluate_accept_object_handle_as_argument",
-    "test_jshandle_evaluate_accept_nested_handle",
-    "test_jshandle_evaluate_accept_nested_window_handle",
-    "test_jshandle_evaluate_accept_multiple_nested_handles",
+    "track_events",
+    "test_expose_function_should_work_on_frames_before_navigation",
     "test_should_dispatch_drag_drop_events",
     "test_should_dispatch_drag_and_drop_events_element_handle",
-    "track_events",
-    "captureLastKeydown",
-    "test_expose_function_should_work_on_frames_before_navigation",
 ]
 
 # Reason for skipping tests_backup
@@ -131,10 +119,14 @@ def process_file(file_path):
                     test_name = current_node.name
 
             if test_name in dont_isolate_evaluation_tests:
-                # Don't add isolated_context=False to these tests
+            #    # Don't add isolated_context=False to these tests
                 continue
 
-            if node.func.attr in ("evaluate", "evaluate_handle", "evaluate_all") and isinstance(node.func.value, ast.Name) and node.func.value.id in ("page", "popup", "button", "new_page", "page1", "page2", "target", "page_1", "page_2", "frame"):
+            if (node.func.attr in ("evaluate", "evaluate_handle", "evaluate_all")
+                and isinstance(node.func.value, ast.Name)
+                and node.func.value.id in ("page", "popup", "button", "new_page", "page1", "page2", "target", "page_1", "page_2", "frame")
+                and not (node.func.value.id == "button" and "element_handle" in file_path)
+            ):
                 node.keywords.append(ast.keyword(arg='isolated_context', value=ast.Constant(value=False)))
 
     modified_source = ast.unparse(ast.fix_missing_locations(file_tree))
@@ -212,6 +204,22 @@ def main():
 
             if file.endswith('.py'):
                 process_file(file_path)
+
+            if file == "test_queryselector.py":
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+
+                # Replace the full quoted strings with valid Python expressions (not strings)
+                content = content.replace(
+                    "assert await page.eval_on_selector_all('isolated=ignored', 'es => window.__answer !== undefined')",
+                    """await page.evaluate('() => window.__answer = document.querySelector("span")', isolated_context=True)\n    assert await page.eval_on_selector_all('isolated=ignored', 'es => window.__answer !== undefined')"""
+                ).replace(
+                    "assert page.eval_on_selector_all('isolated=ignored', 'es => window.__answer !== undefined')",
+                    """page.evaluate('() => window.__answer = document.querySelector("span")', isolated_context=True)\n    assert page.eval_on_selector_all('isolated=ignored', 'es => window.__answer !== undefined')"""
+                )
+
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(content)
 
 if __name__ == '__main__':
     main()

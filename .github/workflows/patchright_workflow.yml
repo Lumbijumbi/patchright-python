@@ -61,7 +61,7 @@ jobs:
       - name: Install Playwright-Python Package
         if: steps.version_check.outputs.proceed == 'true'
         run: |
-          git clone https://github.com/microsoft/playwright-python  --branch ${{ env.playwright_version }}
+          git clone https://github.com/microsoft/playwright-python --branch ${{ env.playwright_version }}
           cd playwright-python
           python -m pip install --upgrade pip
           pip install -r local-requirements.txt

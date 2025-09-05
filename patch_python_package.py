@@ -5,7 +5,7 @@ import os
 import toml
 
 patchright_version = os.environ.get('playwright_version')
-patchright_version = "1.52.5"
+patchright_version = "1.55.0"
 
 def patch_file(file_path: str, patched_tree: ast.AST) -> None:
     with open(file_path, "w") as f:
@@ -288,11 +288,11 @@ async def install_inject_route(self) -> None:
             try:
                 if route.request.resource_type == "document" and route.request.url.startswith("http"):
                     protocol = route.request.url.split(":")[0]
-                    await route.continue_(url=f"{protocol}://patchright-init-script-inject.internal/")
+                    await route.fallback(url=f"{protocol}://patchright-init-script-inject.internal/")
                 else:
-                    await route.continue_()
+                    await route.fallback()
             except:
-                await route.continue_()
+                await route.fallback()
 
     if not self.route_injecting:
         if self._connection._is_sync:
@@ -342,11 +342,11 @@ async def install_inject_route(self) -> None:
             try:
                 if route.request.resource_type == "document" and route.request.url.startswith("http"):
                     protocol = route.request.url.split(":")[0]
-                    await route.continue_(url=f"{protocol}://patchright-init-script-inject.internal/")
+                    await route.fallback(url=f"{protocol}://patchright-init-script-inject.internal/")
                 else:
-                    await route.continue_()
+                    await route.fallback()
             except:
-                await route.continue_()
+                await route.fallback()
 
     if not self.route_injecting and not self.context.route_injecting:
         if self._connection._is_sync:
@@ -411,6 +411,15 @@ with open("playwright-python/playwright/_impl/_clock.py") as f:
                     class_node.body.insert(0, ast.parse("await self._browser_context.install_inject_route()"))
 
     patch_file("playwright-python/playwright/_impl/_clock.py", clock_tree)
+
+# Patching playwright/_impl/_tracing.py
+with open("playwright-python/playwright/_impl/_tracing.py") as f:
+    tracing_source = f.read()
+    tracing_tree = ast.parse(tracing_source)
+
+    for node in ast.walk(tracing_tree):
+        if isinstance(node, ast.AsyncFunctionDef) and node.name == "start":
+            node.body.insert(0, ast.parse("await self._parent.install_inject_route()"))
 
 # Patching playwright/async_api/_generated.py
 with open("playwright-python/playwright/async_api/_generated.py") as f:
