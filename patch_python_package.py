@@ -4,8 +4,7 @@ import os
 
 import toml
 
-patchright_version = os.environ.get('playwright_version')
-# patchright_version = "1.55.2"
+patchright_version = os.environ.get('patchright_release') or os.environ.get('playwright_version')
 
 def patch_file(file_path: str, patched_tree: ast.AST) -> None:
     with open(file_path, "w") as f:
@@ -420,6 +419,8 @@ with open("playwright-python/playwright/_impl/_tracing.py") as f:
     for node in ast.walk(tracing_tree):
         if isinstance(node, ast.AsyncFunctionDef) and node.name == "start":
             node.body.insert(0, ast.parse("await self._parent.install_inject_route()"))
+
+    patch_file("playwright-python/playwright/_impl/_tracing.py", tracing_tree)
 
 # Patching playwright/async_api/_generated.py
 with open("playwright-python/playwright/async_api/_generated.py") as f:
