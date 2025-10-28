@@ -74,7 +74,11 @@ class TestNormalizeViewport:
         result = _normalize_viewport([1920])
         assert "width" in result
         assert "height" in result
-        # Should fallback to random viewport
+        # Should fallback to random viewport since input is invalid
+        assert isinstance(result["width"], int)
+        assert isinstance(result["height"], int)
+        assert result["width"] > 0
+        assert result["height"] > 0
 
 
 class TestLoadFpJson:
