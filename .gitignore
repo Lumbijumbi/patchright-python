@@ -164,4 +164,4 @@ cython_debug/
 
 # Playwright Tests
 playwright-python/
-tests/
+playwright-python/tests/
